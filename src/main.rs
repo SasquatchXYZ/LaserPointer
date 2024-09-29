@@ -1,50 +1,59 @@
-use eframe::Frame;
-use egui::Context;
+use eframe::{Frame, egui, NativeOptions};
+use egui::{CentralPanel, Context, Vec2, Color32, Sense, Pos2};
 
 #[derive(Default)]
-struct NothingApp {
-    number: i32,
-    text: String,
-    code: String,
+struct LaserPointer {
+    position: Pos2,
 }
 
-impl NothingApp {
+impl LaserPointer {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         Self {
-            number: 0,
-            text: String::from("Put some text in here!"),
-            code: String::from(
-                r#"fn main() {
-    println!("Hello, world!");
-}"#
-            ),
+            position: Pos2 { x: 0.0, y: 0.0 }, // We'll put it in the top left corner to start
         }
     }
 }
 
-impl eframe::App for NothingApp {
+impl eframe::App for LaserPointer {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if ui.button("Counter up").clicked() {
-                self.number += 1
-            }
-            if ui.button("Counter down").clicked() {
-                self.number -= 1
-            }
+        CentralPanel::default().show(ctx, |ui| {
+            let rect = ctx.screen_rect();
+            let screen_size = Vec2 {
+                x: rect.width(),
+                y: rect.height(),
+            };
+            let (response, painter) = ui.allocate_painter(screen_size, Sense::hover());
+            if response.hovered() {
+                let Pos2 { x, y } = self.position;
+                let Pos2 { x: x2, y: y2 } = ctx.pointer_hover_pos().unwrap_or_default();
 
-            ui.label(format!("The counter is: {}", self.number));
+                if (x - x2).abs() < 10.0 && (y - y2).abs() < 10.0 {
+                    if fastrand::bool() {
+                        self.position.x += fastrand::f32() * 20.0;
+                    } else {
+                        self.position.x -= fastrand::f32() * 20.0;
+                    }
 
-            ui.text_edit_singleline(&mut self.text);
-            ui.code_editor(&mut self.code);
+                    if fastrand::bool() {
+                        self.position.y += fastrand::f32() * 20.0;
+                    } else {
+                        self.position.y -= fastrand::f32() * 20.0;
+                    }
+                }
+            }
+            self.position.x += 0.5;
+            self.position.y += 0.5;
+            let radius = 10.0;
+            painter.circle_filled(self.position, radius, Color32::RED);
         });
     }
 }
 
 fn main() {
-    let native_options = eframe::NativeOptions::default();
+    let native_options = NativeOptions::default();
     let _ = eframe::run_native(
         "My egui App",
         native_options,
-        Box::new(|cc| Ok(Box::new(NothingApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(LaserPointer::new(cc)))),
     );
 }
